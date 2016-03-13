@@ -6,7 +6,6 @@ import (
 	"strings"
 	"net"
 	"time"
-	"strconv"
 )
 
 type Node struct {
@@ -18,8 +17,6 @@ type Node struct {
 var Iam Node
 var Parent Node
 var neighbors []Node
-var myLeader int
-var leaderPath string
 
 func main() {
 	filename := `configuration.conf`
@@ -35,12 +32,8 @@ func main() {
 			if r {
 				//set p as Parent
 				Parent = p
-				if myLeader == 0 {
-					myLeader,_ = strconv.Atoi(Iam.port) 
-					leaderPath = Iam.port
-				}
 				fmt.Printf("My Parent: %v \n" , Parent)
-				message := "&Iam="+Iam.ip+":"+Iam.port+"&leader="+strconv.Itoa(myLeader)+"&path="+leaderPath+"&broadcast=false"
+				message := "&Iam="+Iam.ip+":"+Iam.port
 				sendMessage(message, Parent)
 				neighbors[i].send = true
 				wfbm = true	
@@ -58,10 +51,6 @@ func main() {
 	}
 }
 
-func broadcast(){
-	fmt.Printf("RECEIVEALL %v \n",neighbors )
-	
-}
 func receiveAll() bool{
 	retV := true
 	for i:=0; i < len(neighbors);i++{
@@ -123,15 +112,6 @@ func analizMessage(message string) map[string]string{
 	GetMessage["ip"] =  mx[0]
 	GetMessage["port"] =  mx[1]
 	
-	getLeader :=strings.Split(ms[2], "=")
-	GetMessage["leader"] =  getLeader[1]
-	
-	getPath :=strings.Split(ms[3], "=")
-	GetMessage["path"] =  getPath[1]
-	
-	getBroadcast :=strings.Split(ms[4], "=")
-	GetMessage["broadcast"] =  getBroadcast[1]
-	
 	fmt.Println("GetMessage-> ",GetMessage)
 	return GetMessage
 }
@@ -170,27 +150,14 @@ func doIt( ms map[string]string){
 	bl, _, _ := allExceptOne()
 	if !bl {
 		neighbors[id].receive = true
-		fmt.Println("Myleader,Path",myLeader,leaderPath)
-		l,_ := strconv.Atoi(ms["leader"])
-		
-		if l > myLeader {
-			myLeader = l
-			leaderPath = ms["port"] + "," +Iam.port
-			fmt.Printf("Myleader %v ,Path %v \n",myLeader,leaderPath)
-		}	
 		fmt.Printf(" &&&&&&&&&& %v \n",neighbors)
 	}else{
-		if ( ms["broadcast"] == "false"){
-			fmt.Printf(" Check if is from my parent \n")
-			if fromMyParent(ms["ip"],ms["port"]){
-				fmt.Printf(" HAHA \n")
-			}else{
-				fmt.Printf(" Ignore the mss \n")
-			}
+		fmt.Printf(" Check if is from my parent \n")
+		if fromMyParent(ms["ip"],ms["port"]){	
+			fmt.Printf(" I'm the Leader %v \n",Iam)	
 		}else{
-			fmt.Printf(" broadcast = true \n")
+			fmt.Printf(" Ignore the mss \n")
 		}
-		
 		
 	}
 	
